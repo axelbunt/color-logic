@@ -9,7 +9,7 @@ def _is_input_right(input_info: str, required_len_of_secret_num: int) -> bool:
 
 
 class Console(Ui):
-    def print_game_rules(self) -> None:
+    def start_game(self) -> None:
         print('"Логика цвета" – игра, похожая на игру "Быки и коровы". Ваш оппонент – компьютер, '
               f"загадывает комбинацию, состоящую из {self.len_of_secret_num} цифр (не обязательно "
               f"различных). В данной интерпретации для удобства цвета заменены цифрами (различные "
@@ -19,9 +19,10 @@ class Console(Ui):
               "выставляет). Черная фишка означает, что какая-то цифра вашего числа совпадает с "
               "цифрой в загаданном числе по месту, белая фишка означает, что цифра вашего числа "
               "содержится в загаднном числе, но находится не на том месте.\n")
+        self.print_secret_num_size(self.len_of_secret_num)
 
-    def print_secret_num_size(self, secret_num: str) -> None:
-        print(f'Загадана комбинация: {"*" * len(secret_num)}.\n')
+    def print_secret_num_size(self, len_of_secret_num: int) -> None:
+        print(f'Загадана комбинация: {"*" * len_of_secret_num}.\n')
 
     def get_correct_input(self, num_of_turns: int, secret_num_len: int) -> str:
         guess = input(f'Ход {num_of_turns}. Ответ: ')
