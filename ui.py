@@ -6,10 +6,10 @@ class Ui:
         self.turn_count = turn_count
         self.len_of_secret_num = len_of_secret_num
 
-    def print_game_rules(self) -> None:
+    def start_game(self) -> None:
         pass
 
-    def print_secret_num_size(self, secret_num: str) -> None:
+    def print_secret_num_size(self, len_of_secret_num: int) -> None:
         pass
 
     def rate_player(self, game_result: bool, num_of_turns: int) -> None:
