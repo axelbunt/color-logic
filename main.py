@@ -1,7 +1,10 @@
 from console import Console
+from gui import Gui
 from grade import Grade
 from ui import Ui
 from random import randint
+import sys
+from typing import Callable
 
 
 # todo: ограничить колво возможных цифр (всего цветов 6)
@@ -43,15 +46,17 @@ def get_guess(num_of_turns: int, secret_num: str, ui: Ui) -> Grade:
     return grade
 
 
-def main(turn_count: int, required_len_of_secret_num: int) -> None:
-    ui = Console(turn_count, required_len_of_secret_num)
+def main(turn_count: int, required_len_of_secret_num: int,
+         ui_type: Callable[[int, int], Ui]) -> None:
+    # ui = Console(turn_count, required_len_of_secret_num)
+    ui = ui_type(turn_count, required_len_of_secret_num)
 
     num_of_turn = 1
     secret_num = setup_new_secret_num(required_len_of_secret_num)
     game_win = False
 
-    ui.print_game_rules()
-    ui.print_secret_num_size(secret_num)
+    ui.start_game()
+    # ui.print_secret_num_size(secret_num)
 
     grade = get_guess(num_of_turn, secret_num, ui)
     if grade.black == 4:
@@ -73,4 +78,9 @@ def main(turn_count: int, required_len_of_secret_num: int) -> None:
 TURN_COUNT = 10
 LEN_OF_SECRET_NUM = 4
 if __name__ == '__main__':
-    main(TURN_COUNT, LEN_OF_SECRET_NUM)
+    ui_constructor: Callable[[int, int], Ui] = Gui
+
+    if "Console" in sys.argv:
+        ui_constructor = Console
+
+    main(TURN_COUNT, LEN_OF_SECRET_NUM, ui_constructor)
