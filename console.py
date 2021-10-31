@@ -11,7 +11,7 @@ def _is_input_right(input_info: str, required_len_of_secret_num: int) -> bool:
 class Console(Ui):
     def start_game(self) -> None:
         print('"Логика цвета" – игра, похожая на игру "Быки и коровы". Ваш оппонент – компьютер, '
-              f"загадывает комбинацию, состоящую из {self.len_of_secret_num} цифр (не обязательно "
+              f"загадывает комбинацию, состоящую из {len(self.secret_num)} цифр (не обязательно "
               f"различных). В данной интерпретации для удобства цвета заменены цифрами (различные "
               "цифры обозначают различные цвета). Ваша задача – отгадать загаданное число за "
               f"наименьшее кол-во ходов. Всего у вас будет {self.turn_count} попыток.\n"
@@ -19,7 +19,7 @@ class Console(Ui):
               "выставляет). Черная фишка означает, что какая-то цифра вашего числа совпадает с "
               "цифрой в загаданном числе по месту, белая фишка означает, что цифра вашего числа "
               "содержится в загаднном числе, но находится не на том месте.\n")
-        self.print_secret_num_size(self.len_of_secret_num)
+        self.print_secret_num_size(len(self.secret_num))
 
     def print_secret_num_size(self, len_of_secret_num: int) -> None:
         print(f'Загадана комбинация: {"*" * len_of_secret_num}.\n')
