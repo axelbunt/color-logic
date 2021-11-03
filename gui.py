@@ -1,4 +1,5 @@
 import sys
+from random import randint
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
@@ -28,6 +29,11 @@ class MyApp(QMainWindow):
         self.black_tokens = 0
         self.white_tokens = 0
         self.colors = {'к': 1, 'з': 2, 'с': 3, 'ж': 4, 'б': 5, 'ч': 6}
+        self.colors_refactor = {'#ff0000': '#008000', '#008000': '#0000ff', '#0000ff': '#ffff00',
+                                '#ffff00': '#ffffff', '#ffffff': '#000000', '#000000': '#ff0000'}
+        self.codes_to_colors = {'#ff0000': 'к', '#008000': 'з', '#0000ff': 'с',
+                                '#ffff00': 'ж', '#ffffff': 'б', '#000000': 'ч'}
+        self.input_type = ''
         self.state = ''
         self.init_ui()
 
@@ -73,6 +79,12 @@ class MyApp(QMainWindow):
                                     width: 400px;
                                     height: 400px;
                                 }""")
+
+    def setup_new_secret_num(self, required_len_of_num: int) -> str:
+        secret_num = ''
+        for _ in range(required_len_of_num):
+            secret_num += str(randint(1, 6))
+        return secret_num
 
     def set_main_window(self) -> None:
         self.btn_back = QPushButton(self)
@@ -127,6 +139,10 @@ class MyApp(QMainWindow):
         self.btn_exit.setVisible(False)
 
     def return_to_main_window(self) -> None:
+        if self.state == 'waiting for input':
+            self.turn_count = self.TURN_COUNT
+            self.black_tokens = 0
+            self.white_tokens = 0
         if self.state == 'game finished':
             self.state = ''
         self.btn_back.setText('<-')
@@ -135,10 +151,29 @@ class MyApp(QMainWindow):
         try:
             self.btn_for_console.setVisible(False)
             self.btn_for_interactive.setVisible(False)
+
+            for i in range(len(self.secret_num)):
+                btn = self.input_layout.itemAt(i).widget()
+                btn.setVisible(False)
+        except AttributeError:
+            pass
+        try:
             self.input.setVisible(False)
+        except AttributeError:
+            pass
+        try:
             self.btn_ok.setVisible(False)
+        except AttributeError:
+            pass
+        try:
             self.sub_rules.setVisible(False)
-            # self.all_colors.setVisible(False)
+        except AttributeError:
+            pass
+        try:
+            self.all_colors.setVisible(False)
+        except AttributeError:
+            pass
+        try:
             self.btn_for_new_game.setVisible(False)
         except AttributeError:
             pass
@@ -179,6 +214,7 @@ class MyApp(QMainWindow):
         self.main_layout.addLayout(self.layout_for_game)
 
     def setup_console_input(self) -> None:
+        self.input_type = 'keyboard'
         self.state = 'waiting for input'
         self.setFocus()
 
@@ -215,14 +251,7 @@ class MyApp(QMainWindow):
                                '"ж" – желтый, "б" – белый, "ч" – черный.')
         self.sub_rules.setAlignment(Qt.AlignCenter)
 
-        # self.all_colors = QLabel(self)
-        # self.all_colors.setWordWrap(True)
-        # self.all_colors.setText('Доступные цвета: "к" – красный, "з" – зеленый, "с" – синий, '
-        #                         '"ж" – желтый, "б" – белый, "ч" – черный.')
-        # self.all_colors.setAlignment(Qt.AlignCenter)
-
         self.main_layout.addWidget(self.sub_rules)
-        # self.main_layout.addWidget(self.all_colors)
 
     def grader(self, guess: str, secret_num: str) -> Grade:
         black, white = 0, 0
@@ -267,10 +296,21 @@ class MyApp(QMainWindow):
             self.update_status(grade)
 
     def finish_game(self, is_win: bool) -> None:
+        self.input_type = ''
         self.state = 'game finished'
 
-        self.input.setVisible(False)
+        try:
+            self.input.setVisible(False)
+        except AttributeError:
+            pass
+        try:
+            for i in range(len(self.secret_num)):
+                btn = self.input_layout.itemAt(i).widget()
+                btn.setVisible(False)
+        except AttributeError:
+            pass
         self.btn_ok.setVisible(False)
+
         self.sub_rules.setVisible(False)
 
         self.btn_back.setText('В главное меню')
@@ -296,6 +336,8 @@ class MyApp(QMainWindow):
 
         self.write_to_data_base(is_win)
 
+        self.secret_num = self.setup_new_secret_num(len(self.secret_num))
+
         self.turn_count = self.TURN_COUNT
         self.black_tokens = 0
         self.white_tokens = 0
@@ -313,7 +355,18 @@ class MyApp(QMainWindow):
                                    f'Попыток осталось: {self.turn_count}')
 
     def get_correct_input(self, num_of_turns: int, secret_num_len: int) -> str:
-        guess = self.input.text().lower()
+        guess = ''
+        if self.input_type == 'keyboard':
+            guess = self.input.text().lower()
+        if self.input_type == 'buttons':
+            colors = []
+            for i in range(len(self.secret_num)):
+                btn = self.input_layout.itemAt(i).widget()
+                colors.append(btn.palette().window().color().name())
+
+            for color in colors:
+                guess += str(self.codes_to_colors[color])
+
         # todo: кидать разные (собственные) виды исключений
         try:
             if num_of_turns == 0:
@@ -340,13 +393,55 @@ class MyApp(QMainWindow):
                                    f'Попыток осталось: {self.turn_count}')
 
     def setup_interactive_input(self) -> None:
-        self.layout_for_game.addWidget(self.for_text_info)
-        self.for_text_info.setText('В разработке...')
+        self.input_type = 'buttons'
+        self.state = 'waiting for input'
+        self.setFocus()
+
+        self.btn_back.setText('Прекратить игру')
+        self.btn_back.resize(180, 30)
         self.btn_for_console.setVisible(False)
         self.btn_for_interactive.setVisible(False)
 
+        self.layout_for_game.addWidget(self.for_text_info)
+        self.for_text_info.setText(f'Загаданная комбинация: {"*" * len(self.secret_num)}\n\n'
+                                   f'Черных фишек: {self.black_tokens}\n'
+                                   f'Белых фишек: {self.white_tokens}\n'
+                                   f'Попыток осталось: {self.turn_count}')
+        self.for_text_info.setAlignment(Qt.AlignLeft)
+
+        self.btn_ok = QPushButton(self)
+        self.btn_ok.setText('ОК')
+        self.btn_ok.clicked.connect(self.call_for_correct_input)
+        self.btn_ok.setStyleSheet('width: 100; height: 30')
+
+        self.input_layout = QHBoxLayout(self)
+
+        for _ in range(len(self.secret_num)):
+            self.btn_to_choose_color = QPushButton(self)
+            self.btn_to_choose_color.clicked.connect(self.change_btn_color)
+            self.btn_to_choose_color.setStyleSheet('width: 160px; background-color: red')
+            self.input_layout.addWidget(self.btn_to_choose_color)
+
+        self.input_layout.addWidget(self.btn_ok)
+
+        self.layout_for_game.addLayout(self.input_layout)
+
+        self.sub_rules = QLabel(self)
+        self.sub_rules.setWordWrap(True)
+        self.sub_rules.setText('Нажимая на цветные кнопки, вы можете менять их цвет. '
+                               'Последоавтельность изменения: красный - зеленый - синий - '
+                               'желтый - белый - черный - ...\n'
+                               'Для подтверждения нажмите OK или Enter.')
+        self.sub_rules.setAlignment(Qt.AlignCenter)
+
+        self.main_layout.addWidget(self.sub_rules)
+
         self.btn_back.setText('В главное меню')
         self.btn_back.resize(180, 30)
+
+    def change_btn_color(self) -> None:
+        color_to_change = self.colors_refactor[self.sender().palette().window().color().name()]
+        self.sender().setStyleSheet(f'background-color: {color_to_change}; width: 160px')
 
     def go_to_rules(self) -> None:
         self.del_main_window()
@@ -392,7 +487,7 @@ class MyApp(QMainWindow):
         self.main_layout.addWidget(self.for_text_info)
         self.for_text_info.setText('Игру создал: Axelbunt54\n'
                                    'Дата начала работы: 04.09.2021\n'
-                                   'Версия: v0.4')
+                                   'Версия: v0.5')
 
     def exit(self) -> None:
         sys.exit()
