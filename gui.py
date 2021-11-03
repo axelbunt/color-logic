@@ -1,10 +1,14 @@
+import datetime
+import sqlite3
 import sys
 from random import randint
+import traceback
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, QWidget, QLabel, \
-    QTableWidget, QHBoxLayout, QLineEdit
+    QHBoxLayout, QLineEdit, QTableView, QHeaderView
 
 from grade import Grade
 from ui import Ui
@@ -97,7 +101,7 @@ class MyApp(QMainWindow):
         self.for_text_info.setWordWrap(True)
         self.for_text_info.setAlignment(Qt.AlignCenter)
 
-        self.table = QTableWidget(self)
+        self.table = QTableView(self)
         self.table.setVisible(False)
 
         self.btn_start = QPushButton(self)
@@ -343,8 +347,23 @@ class MyApp(QMainWindow):
         self.white_tokens = 0
 
     def write_to_data_base(self, is_win: bool) -> None:
-        # в БД: результат игры, затрачено попыток, дата/время
-        pass
+        # todo: автоматическое создание базы данных
+        try:
+            con = sqlite3.connect('for_stat.sqlite')
+            cur = con.cursor()
+
+            if is_win:
+                game_res = 'Победа'
+            else:
+                game_res = 'Поражение'
+
+            date = datetime.datetime.today().strftime('%d %b %Y - %H:%M:%S')
+
+            cur.execute(f"""INSERT INTO statistic
+                VALUES('{date}', '{game_res}', {self.TURN_COUNT - self.turn_count})""")
+            con.commit()
+        except Exception:
+            print(traceback.format_exc())
 
     def update_status(self, grade: Grade) -> None:
         self.black_tokens = grade.black
@@ -382,6 +401,7 @@ class MyApp(QMainWindow):
             return guess_to_return
         except Exception:
             # todo: выводить уведомление о неправильном вводе
+            print(traceback.format_exc())
             return 'error'
 
     def print_grade(self, grade: Grade) -> None:
@@ -448,7 +468,6 @@ class MyApp(QMainWindow):
         self.btn_back.setVisible(True)
         self.for_text_info.setVisible(True)
         self.main_layout.addWidget(self.for_text_info)
-        # todo: автоперенос текста - Done
         self.for_text_info.setText('Правила игры:\n'
                                    '"Логика цвета" – игра, похожая на игру "Быки и коровы". Ваш '
                                    'оппонент – компьютер, загадывает комбинацию, состоящую из '
@@ -468,17 +487,24 @@ class MyApp(QMainWindow):
         self.for_text_info.setVisible(True)
         self.main_layout.addWidget(self.for_text_info)
         self.for_text_info.setVisible(True)
-        self.for_text_info.setText('\nВ разработке...')  # todo: убрать этот костыль
+        self.for_text_info.setText('\nСтатистика игр')  # todo: убрать этот костыль
 
         self.table.setVisible(True)
-        self.table.setColumnCount(4)
-        self.table.setRowCount(0)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.fill_table()
         self.main_layout.addWidget(self.table)
 
-    # todo: сделать БД, выгрузку/запись из/в БД
     def fill_table(self) -> None:
-        pass
+        db = QSqlDatabase.addDatabase('QSQLITE')
+        db.setDatabaseName('for_stat.sqlite')
+        db.open()
+
+        model = QSqlTableModel(self, db)
+        model.setTable('statistic')
+        model.sort(0, Qt.DescendingOrder)
+        model.select()
+
+        self.table.setModel(model)
 
     def go_to_dev_info(self) -> None:
         self.del_main_window()
@@ -487,7 +513,7 @@ class MyApp(QMainWindow):
         self.main_layout.addWidget(self.for_text_info)
         self.for_text_info.setText('Игру создал: Axelbunt54\n'
                                    'Дата начала работы: 04.09.2021\n'
-                                   'Версия: v0.5')
+                                   'Версия: v0.6')
 
     def exit(self) -> None:
         sys.exit()
