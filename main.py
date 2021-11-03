@@ -1,9 +1,11 @@
+import sys
+import traceback
+
 from console import Console
 from gui import Gui
 from grade import Grade
 from ui import Ui
 from random import randint
-import sys
 from typing import Callable
 
 
@@ -73,8 +75,8 @@ def main(turn_count: int, required_len_of_secret_num: int,
                 num_of_turn += 1
 
         ui.rate_player(game_win, num_of_turn)
-    except Exception as e:
-        print(e)
+    except Exception:
+        print(traceback.format_exc())
 
 
 TURN_COUNT = 10
