@@ -7,9 +7,7 @@ import sys
 from typing import Callable
 
 
-# todo: ограничить колво возможных цифр (всего цветов 6) - Done
 def setup_new_secret_num(required_len_of_num: int) -> str:
-    # return str(randint(10 ** (required_len_of_num - 1), 10 ** required_len_of_num - 1))
     secret_num = ''
     for _ in range(required_len_of_num):
         secret_num += str(randint(1, 6))
