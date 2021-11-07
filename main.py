@@ -16,9 +16,6 @@ def setup_new_secret_num(required_len_of_num: int) -> str:
     return secret_num
 
 
-assert len(setup_new_secret_num(4)) == 4, setup_new_secret_num(4)
-
-
 def grader(guess: str, secret_num: str) -> Grade:
     black, white = 0, 0
 
