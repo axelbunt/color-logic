@@ -33,9 +33,9 @@ class Console(Ui):
         return guess
 
     def print_grade(self, grade: Grade) -> None:
-        print(f'Результат: {grade.black} черных, {grade.white} белых.\n')
-        # todo: измениение слов "черных", "белых" взависимости от значений grade.black и grade.white
-        #       (make_pretty_grade_output)
+        print(f'\n'
+              f'Черных фишек: {grade.black}\n'
+              f'Белых фишек: {grade.white}\n')
 
     def rate_player(self, game_result: bool, num_of_turns: int) -> None:
         if game_result:
