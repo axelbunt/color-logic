@@ -50,7 +50,7 @@ class MyApp(QMainWindow):
         self.is_data_base_created = False
         try:
             with open('for_stat.sqlite'):
-                self.is_data_base_created = True
+                pass
         except IOError:
             con = sqlite3.connect('for_stat.sqlite')
             cur = con.cursor()
@@ -60,13 +60,15 @@ class MyApp(QMainWindow):
                                 Результат TEXT,
                                 "Количество ходов" INTEGER)""")
             con.close()
+        finally:
+            self.is_data_base_created = True
 
     def init_ui(self) -> None:
         self.setGeometry(450, 200, WIDTH, HEIGHT)
         self.setFixedWidth(WIDTH)
         self.setFixedHeight(HEIGHT)
         self.setWindowTitle('Логика цвета')
-        self.setWindowIcon(QIcon('icon.png'))
+        self.setWindowIcon(QIcon('images/icon.png'))
 
         self.window = QWidget()
         self.setCentralWidget(self.window)
@@ -357,9 +359,10 @@ class MyApp(QMainWindow):
         self.white_tokens = 0
 
     def write_to_data_base(self, is_win: bool) -> None:
-        if not self.is_data_base_created:
-            raise NoDatabase()
         try:
+            if not self.is_data_base_created:
+                raise NoDatabase()
+
             con = sqlite3.connect('for_stat.sqlite')
             cur = con.cursor()
 
