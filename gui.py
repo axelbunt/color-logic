@@ -1,19 +1,25 @@
+import ctypes
 import datetime
+from random import randint
 import sqlite3
 import sys
-from random import randint
 import traceback
 
-from PyQt5 import QtGui
+from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, QWidget, QLabel, \
     QHBoxLayout, QLineEdit, QTableView, QHeaderView
 
+from exceptions import *
 from grade import Grade
 from ui import Ui
 
 WIDTH, HEIGHT = 1100, 750
+
+my_app_id = u'color_logic'
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)
 
 
 def open_app(secret_num: str, turn_count: int) -> None:
@@ -41,29 +47,29 @@ class MyApp(QMainWindow):
         self.state = ''
         self.init_ui()
 
+        self.is_data_base_created = False
+        try:
+            with open('for_stat.sqlite'):
+                self.is_data_base_created = True
+        except IOError:
+            con = sqlite3.connect('for_stat.sqlite')
+            cur = con.cursor()
+
+            cur.execute("""CREATE TABLE statistic (
+                                Дата TEXT PRIMARY KEY,
+                                Результат TEXT,
+                                "Количество ходов" INTEGER)""")
+            con.close()
+
     def init_ui(self) -> None:
         self.setGeometry(450, 200, WIDTH, HEIGHT)
         self.setFixedWidth(WIDTH)
         self.setFixedHeight(HEIGHT)
         self.setWindowTitle('Логика цвета')
+        self.setWindowIcon(QIcon('icon.png'))
 
         self.window = QWidget()
         self.setCentralWidget(self.window)
-
-        # todo: поставить .svg на background
-        # contents = b""
-        # file = QtCore.QTemporaryFile(self.window)
-        # if file.open():
-        #     file.write(contents)
-        #     file.flush()
-        #     self.window.setStyleSheet("""background-image: url(%s);""" % file.fileName())
-        # QtCore.QMetaObject.connectSlotsByName(self.window)
-        # MainWindow
-        # {
-        #     background - image: url(bg.jpg);
-        # background - repeat: no - repeat;
-        # background - position: center;
-        # }
 
         self.set_main_window()
         self.setStyleSheet("""  QPushButton {
@@ -102,6 +108,8 @@ class MyApp(QMainWindow):
         self.for_text_info.setAlignment(Qt.AlignCenter)
 
         self.table = QTableView(self)
+        self.table.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table.setVisible(False)
 
         self.btn_start = QPushButton(self)
@@ -144,6 +152,7 @@ class MyApp(QMainWindow):
 
     def return_to_main_window(self) -> None:
         if self.state == 'waiting for input':
+            self.secret_num = self.setup_new_secret_num(len(self.secret_num))
             self.turn_count = self.TURN_COUNT
             self.black_tokens = 0
             self.white_tokens = 0
@@ -235,6 +244,7 @@ class MyApp(QMainWindow):
         self.for_text_info.setAlignment(Qt.AlignLeft)
 
         self.input = QLineEdit(self)
+        self.input.setMaxLength(len(self.secret_num))
         self.input.setStyleSheet('height: 30; border-radius: 10px; border: 1px solid;'
                                  'font-size: 20px')
         self.btn_ok = QPushButton(self)
@@ -347,7 +357,8 @@ class MyApp(QMainWindow):
         self.white_tokens = 0
 
     def write_to_data_base(self, is_win: bool) -> None:
-        # todo: автоматическое создание базы данных
+        if not self.is_data_base_created:
+            raise NoDatabase()
         try:
             con = sqlite3.connect('for_stat.sqlite')
             cur = con.cursor()
@@ -362,7 +373,7 @@ class MyApp(QMainWindow):
             cur.execute(f"""INSERT INTO statistic
                 VALUES('{date}', '{game_res}', {self.TURN_COUNT - self.turn_count})""")
             con.commit()
-        except Exception:
+        except AppException:
             print(traceback.format_exc())
 
     def update_status(self, grade: Grade) -> None:
@@ -378,30 +389,25 @@ class MyApp(QMainWindow):
         if self.input_type == 'keyboard':
             guess = self.input.text().lower()
         if self.input_type == 'buttons':
-            colors = []
             for i in range(len(self.secret_num)):
                 btn = self.input_layout.itemAt(i).widget()
-                colors.append(btn.palette().window().color().name())
-
-            for color in colors:
+                color = btn.palette().window().color().name()
                 guess += str(self.codes_to_colors[color])
 
-        # todo: кидать разные (собственные) виды исключений
         try:
             if num_of_turns == 0:
-                raise Exception
+                raise TurnsOut()
             if len(guess) != secret_num_len:
-                raise Exception
+                raise WrongInputLen()
 
             guess_to_return = ''
             for char in guess:
                 if char not in self.colors:
-                    raise Exception
+                    raise WrongColor()
                 guess_to_return += str(self.colors[char])
             return guess_to_return
-        except Exception:
+        except InputException:
             # todo: выводить уведомление о неправильном вводе
-            print(traceback.format_exc())
             return 'error'
 
     def print_grade(self, grade: Grade) -> None:
@@ -513,7 +519,7 @@ class MyApp(QMainWindow):
         self.main_layout.addWidget(self.for_text_info)
         self.for_text_info.setText('Игру создал: Axelbunt54\n'
                                    'Дата начала работы: 04.09.2021\n'
-                                   'Версия: v0.6')
+                                   'Версия: v0.7')
 
     def exit(self) -> None:
         sys.exit()
