@@ -45,7 +45,6 @@ class MyApp(QMainWindow):
                                 '#ffff00': 'ж', '#ffffff': 'б', '#000000': 'ч'}
         self.input_type = ''
         self.state = ''
-        self.init_ui()
 
         self.is_data_base_created = False
         try:
@@ -63,6 +62,33 @@ class MyApp(QMainWindow):
         finally:
             self.is_data_base_created = True
 
+        self.init_ui()
+
+    def setup_new_secret_num(self, required_len_of_num: int) -> str:
+        secret_num = ''
+        for _ in range(required_len_of_num):
+            secret_num += str(randint(1, 6))
+        return secret_num
+
+    def grader(self, guess: str, secret_num: str) -> Grade:
+        black, white = 0, 0
+
+        guess_for_white = []
+        secret_num_for_white = []
+        for i in range(len(guess)):
+            if guess[i] == secret_num[i]:
+                black += 1
+            else:
+                guess_for_white.append(guess[i])
+                secret_num_for_white.append(secret_num[i])
+
+        for char in guess_for_white:
+            if char in secret_num_for_white:
+                white += 1
+                del secret_num_for_white[secret_num_for_white.index(char)]
+
+        return Grade(black, white)
+
     def init_ui(self) -> None:
         self.setGeometry(450, 200, WIDTH, HEIGHT)
         self.setFixedWidth(WIDTH)
@@ -74,29 +100,23 @@ class MyApp(QMainWindow):
         self.setCentralWidget(self.window)
 
         self.set_main_window()
-        self.setStyleSheet("""  QPushButton {
-                                    font-size: 20px;
-                                    border: 2px solid;
-                                    border-radius: 10px;
-                                    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                        stop: 0 #f6f7fa, stop: 1 #dadbde);
-                                    width: 400px;
-                                    height: 50px;
-                                }
-                                QPushButton:hover {
-                                    background-color: white;
-                                }
-                                QLabel {
-                                    font-size: 20px;
-                                    width: 400px;
-                                    height: 400px;
-                                }""")
-
-    def setup_new_secret_num(self, required_len_of_num: int) -> str:
-        secret_num = ''
-        for _ in range(required_len_of_num):
-            secret_num += str(randint(1, 6))
-        return secret_num
+        self.setStyleSheet("""QPushButton {
+                                  font-size: 20px;
+                                  border: 2px solid;
+                                  border-radius: 10px;
+                                  background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 #f6f7fa, stop: 1 #dadbde);
+                                  width: 400px;
+                                  height: 50px;
+                              }
+                              QPushButton:hover {
+                                  background-color: white;
+                              }
+                              QLabel {
+                                  font-size: 20px;
+                                  width: 400px;
+                                  height: 400px;
+                              }""")
 
     def set_main_window(self) -> None:
         self.btn_back = QPushButton(self)
@@ -251,7 +271,7 @@ class MyApp(QMainWindow):
                                  'font-size: 20px')
         self.btn_ok = QPushButton(self)
         self.btn_ok.setText('ОК')
-        self.btn_ok.clicked.connect(self.call_for_correct_input)
+        self.btn_ok.clicked.connect(self.get_input_and_rate_player)
         self.btn_ok.setStyleSheet('width: 100; height: 30')
         self.input_layout = QHBoxLayout(self)
         self.input_layout.addWidget(self.input)
@@ -269,31 +289,60 @@ class MyApp(QMainWindow):
 
         self.main_layout.addWidget(self.sub_rules)
 
-    def grader(self, guess: str, secret_num: str) -> Grade:
-        black, white = 0, 0
+    def setup_interactive_input(self) -> None:
+        self.input_type = 'buttons'
+        self.state = 'waiting for input'
+        self.setFocus()
 
-        guess_for_white = []
-        secret_num_for_white = []
-        for i in range(len(guess)):
-            if guess[i] == secret_num[i]:
-                black += 1
-            else:
-                guess_for_white.append(guess[i])
-                secret_num_for_white.append(secret_num[i])
+        self.btn_back.setText('Прекратить игру')
+        self.btn_back.resize(180, 30)
+        self.btn_for_console.setVisible(False)
+        self.btn_for_interactive.setVisible(False)
 
-        for char in guess_for_white:
-            if char in secret_num_for_white:
-                white += 1
-                del secret_num_for_white[secret_num_for_white.index(char)]
+        self.layout_for_game.addWidget(self.for_text_info)
+        self.update_grade_status(Grade(black=0, white=0))
+        self.for_text_info.setAlignment(Qt.AlignLeft)
 
-        return Grade(black, white)
+        self.btn_ok = QPushButton(self)
+        self.btn_ok.setText('ОК')
+        self.btn_ok.clicked.connect(self.get_input_and_rate_player)
+        self.btn_ok.setStyleSheet('width: 100; height: 30')
+
+        self.input_layout = QHBoxLayout(self)
+
+        for _ in range(len(self.secret_num)):
+            self.btn_to_choose_color = QPushButton(self)
+            self.btn_to_choose_color.clicked.connect(self.change_btn_color)
+            self.btn_to_choose_color.setStyleSheet('width: 160px; background-color: red')
+            self.input_layout.addWidget(self.btn_to_choose_color)
+
+        self.input_layout.addWidget(self.btn_ok)
+
+        self.layout_for_game.addLayout(self.input_layout)
+
+        self.sub_rules = QLabel(self)
+        self.sub_rules.setWordWrap(True)
+        self.sub_rules.setText('Нажимая на цветные кнопки, вы можете менять их цвет. '
+                               'Последоавтельность изменения: красный - зеленый - синий - '
+                               'желтый - белый - черный - ...\n'
+                               'Для подтверждения нажмите OK или Enter.')
+        self.sub_rules.setAlignment(Qt.AlignCenter)
+
+        self.main_layout.addWidget(self.sub_rules)
+
+        self.btn_back.setText('В главное меню')
+        self.btn_back.resize(180, 30)
+
+    def change_btn_color(self) -> None:
+        color_to_change = self.colors_refactor[self.sender().palette().window().color().name()]
+        self.sender().setStyleSheet(f'background-color: {color_to_change}; width: 160px')
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         if self.state == 'waiting for input' and (event.key() == Qt.Key_Enter or
                                                   event.key() == Qt.Key_Return):
-            self.call_for_correct_input()
+            self.get_input_and_rate_player()
 
-    def call_for_correct_input(self) -> None:
+    def get_input_and_rate_player(self) -> None:
         self.state = 'waiting for input'
         guess = self.get_correct_input(self.turn_count, len(self.secret_num))
 
@@ -309,7 +358,41 @@ class MyApp(QMainWindow):
             if self.turn_count == 0:
                 self.finish_game(False)
                 return
-            self.update_status(grade)
+            self.update_grade_status(grade)
+
+    def get_correct_input(self, num_of_turns: int, secret_num_len: int) -> str:
+        guess = ''
+        if self.input_type == 'keyboard':
+            guess = self.input.text().lower()
+        if self.input_type == 'buttons':
+            for i in range(len(self.secret_num)):
+                btn = self.input_layout.itemAt(i).widget()
+                color = btn.palette().window().color().name()
+                guess += str(self.codes_to_colors[color])
+
+        try:
+            if num_of_turns == 0:
+                raise TurnsOut()
+            if len(guess) != secret_num_len:
+                raise WrongInputLen()
+
+            guess_to_return = ''
+            for char in guess:
+                if char not in self.colors:
+                    raise WrongColor()
+                guess_to_return += str(self.colors[char])
+            return guess_to_return
+        except InputException:
+            # todo: выводить уведомление о неправильном вводе
+            return 'error'
+
+    def update_grade_status(self, grade: Grade) -> None:
+        self.black_tokens = grade.black
+        self.white_tokens = grade.white
+        self.for_text_info.setText(f'Загаданная комбинация: {"*" * len(self.secret_num)}\n\n'
+                                   f'Черных фишек: {self.black_tokens}\n'
+                                   f'Белых фишек: {self.white_tokens}\n'
+                                   f'Попыток осталось: {self.turn_count}')
 
     def finish_game(self, is_win: bool) -> None:
         self.input_type = ''
@@ -378,99 +461,6 @@ class MyApp(QMainWindow):
             con.commit()
         except AppException:
             print(traceback.format_exc())
-
-    def update_status(self, grade: Grade) -> None:
-        self.black_tokens = grade.black
-        self.white_tokens = grade.white
-        self.for_text_info.setText(f'Загаданная комбинация: {"*" * len(self.secret_num)}\n\n'
-                                   f'Черных фишек: {self.black_tokens}\n'
-                                   f'Белых фишек: {self.white_tokens}\n'
-                                   f'Попыток осталось: {self.turn_count}')
-
-    def get_correct_input(self, num_of_turns: int, secret_num_len: int) -> str:
-        guess = ''
-        if self.input_type == 'keyboard':
-            guess = self.input.text().lower()
-        if self.input_type == 'buttons':
-            for i in range(len(self.secret_num)):
-                btn = self.input_layout.itemAt(i).widget()
-                color = btn.palette().window().color().name()
-                guess += str(self.codes_to_colors[color])
-
-        try:
-            if num_of_turns == 0:
-                raise TurnsOut()
-            if len(guess) != secret_num_len:
-                raise WrongInputLen()
-
-            guess_to_return = ''
-            for char in guess:
-                if char not in self.colors:
-                    raise WrongColor()
-                guess_to_return += str(self.colors[char])
-            return guess_to_return
-        except InputException:
-            # todo: выводить уведомление о неправильном вводе
-            return 'error'
-
-    def print_grade(self, grade: Grade) -> None:
-        self.black_tokens = grade.black
-        self.white_tokens = grade.white
-        self.for_text_info.setText(f'Загаданная комбинация: {"*" * self.len_of_secret_num}\n\n'
-                                   f'Черных фишек: {self.black_tokens}\n'
-                                   f'Белых фишек: {self.white_tokens}\n'
-                                   f'Попыток осталось: {self.turn_count}')
-
-    def setup_interactive_input(self) -> None:
-        self.input_type = 'buttons'
-        self.state = 'waiting for input'
-        self.setFocus()
-
-        self.btn_back.setText('Прекратить игру')
-        self.btn_back.resize(180, 30)
-        self.btn_for_console.setVisible(False)
-        self.btn_for_interactive.setVisible(False)
-
-        self.layout_for_game.addWidget(self.for_text_info)
-        self.for_text_info.setText(f'Загаданная комбинация: {"*" * len(self.secret_num)}\n\n'
-                                   f'Черных фишек: {self.black_tokens}\n'
-                                   f'Белых фишек: {self.white_tokens}\n'
-                                   f'Попыток осталось: {self.turn_count}')
-        self.for_text_info.setAlignment(Qt.AlignLeft)
-
-        self.btn_ok = QPushButton(self)
-        self.btn_ok.setText('ОК')
-        self.btn_ok.clicked.connect(self.call_for_correct_input)
-        self.btn_ok.setStyleSheet('width: 100; height: 30')
-
-        self.input_layout = QHBoxLayout(self)
-
-        for _ in range(len(self.secret_num)):
-            self.btn_to_choose_color = QPushButton(self)
-            self.btn_to_choose_color.clicked.connect(self.change_btn_color)
-            self.btn_to_choose_color.setStyleSheet('width: 160px; background-color: red')
-            self.input_layout.addWidget(self.btn_to_choose_color)
-
-        self.input_layout.addWidget(self.btn_ok)
-
-        self.layout_for_game.addLayout(self.input_layout)
-
-        self.sub_rules = QLabel(self)
-        self.sub_rules.setWordWrap(True)
-        self.sub_rules.setText('Нажимая на цветные кнопки, вы можете менять их цвет. '
-                               'Последоавтельность изменения: красный - зеленый - синий - '
-                               'желтый - белый - черный - ...\n'
-                               'Для подтверждения нажмите OK или Enter.')
-        self.sub_rules.setAlignment(Qt.AlignCenter)
-
-        self.main_layout.addWidget(self.sub_rules)
-
-        self.btn_back.setText('В главное меню')
-        self.btn_back.resize(180, 30)
-
-    def change_btn_color(self) -> None:
-        color_to_change = self.colors_refactor[self.sender().palette().window().color().name()]
-        self.sender().setStyleSheet(f'background-color: {color_to_change}; width: 160px')
 
     def go_to_rules(self) -> None:
         self.del_main_window()
